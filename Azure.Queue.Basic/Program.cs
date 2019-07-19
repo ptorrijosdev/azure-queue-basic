@@ -16,15 +16,20 @@ namespace Azure.Queue.Basic
 
         private static async Task MainAsync()
         {
+            // Run main tasks
             await RunProducer();
+            await RunConsumer("First consumer");
+            await RunConsumer("Second consumer");
 
-            await RunConsumer("Consumidor 1");
-            await RunConsumer("Consumidor 2");
+            // Wait program, do not close yet
             Console.ReadKey();
         }
 
         private static async Task<int> RunProducer()
         {
+            Console.WriteLine("Producer starting...");
+
+            // Get the Azure Storage Queue Client
             var queue = GetQueue();
             int i = 1;
 
@@ -32,9 +37,11 @@ namespace Azure.Queue.Basic
             {
                 while (true)
                 {
-                    string text = string.Format("Se ha producido el mensaje {0}", i);
-
+                    // Create a new message
+                    string text = string.Format("One message has been stored: {0}", i);
                     CloudQueueMessage message = new CloudQueueMessage(text);
+
+                    // Enqueue the new message
                     queue.AddMessage(message);
 
                     lock (Console.Out)
@@ -46,6 +53,7 @@ namespace Azure.Queue.Basic
 
                     i++;
 
+                    // Wait half a second, so we can read the trace on console. Thanks, you Billy the Kid CPU
                     System.Threading.Thread.Sleep(500);
                 }
             });
@@ -55,8 +63,9 @@ namespace Azure.Queue.Basic
 
         private static async Task<int> RunConsumer(string consumerName)
         {
-            Console.WriteLine("Consumidor {0} arrancando...", consumerName);
+            Console.WriteLine("Consumer \"{0}\" starting...", consumerName);
 
+            // Get the Azure Storage Queue Client
             var queue = GetQueue();
             int i = 1;
 
@@ -64,11 +73,12 @@ namespace Azure.Queue.Basic
             {
                 while (true)
                 {
+                    // Dequeue a new message from our Azure Storage Queue
                     var message = queue.GetMessage();
 
                     if (message != null)
                     {
-                        string text = string.Format("El consumidor {0} ha consumido el mensaje {1}", consumerName, message.AsString);
+                        string text = string.Format("The consumer \"{0}\" has retrieved a message: {1}", consumerName, message.AsString);
 
                         lock (Console.Out)
                         {
@@ -76,6 +86,7 @@ namespace Azure.Queue.Basic
                             Console.WriteLine(text);
                             Console.ResetColor();
                         }
+                        // Remove the message from the queue
                         queue.DeleteMessage(message);
 
                         i++;
@@ -89,7 +100,7 @@ namespace Azure.Queue.Basic
 
         private static CloudQueue GetQueue()
         {
-            string sasKey = "zTA+jRkVejMzJM1xVtPy+iC5c0Ac2Mu2e4enhGXNLTcbgj9e8Jxz67lLbey9iImoBgCt/O0uBvHO1p+khOlNuQ==";
+            string sasKey = "SECRET_KEY";
             StorageCredentials credentials = new StorageCredentials("queuetorrijos", sasKey);
 
             CloudStorageAccount account = new CloudStorageAccount(credentials, true);
